@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Internship Digest</title>
+  <style>
+    /* Reset */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f7fa;
+      color: #222;
+      padding: 24px 16px;
+    }
+
+    .wrapper {
+      max-width: 680px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* Header */
+    .header {
+      background: #1a73e8;
+      color: #fff;
+      padding: 28px 32px 20px;
+    }
+    .header h1 {
+      font-size: 1.5em;
+      letter-spacing: -0.3px;
+    }
+    .header .meta {
+      margin-top: 6px;
+      font-size: 0.9em;
+      opacity: 0.85;
+    }
+
+    /* Body */
+    .body {
+      padding: 24px 32px;
+    }
+
+    /* Group label */
+    .group-label {
+      font-size: 0.75em;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #888;
+      margin: 24px 0 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+
+    /* Job card */
+    .job-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      transition: box-shadow 0.15s;
+    }
+    .job-title a {
+      font-size: 1.05em;
+      font-weight: bold;
+      color: #1a73e8;
+      text-decoration: none;
+    }
+    .job-title a:hover { text-decoration: underline; }
+    .job-meta {
+      color: #555;
+      font-size: 0.875em;
+      margin-top: 5px;
+    }
+    .source-badge {
+      display: inline-block;
+      background: #e8f0fe;
+      color: #1a73e8;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-size: 0.78em;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 16px 32px 24px;
+      text-align: center;
+      font-size: 0.78em;
+      color: #aaa;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <div class="header">
+      <h1>&#x1F916; Summer 2027 Internship Digest</h1>
+      <div class="meta">{{ date }} &nbsp;&middot;&nbsp; {{ jobs | length }} new listing{{ 's' if jobs | length != 1 else '' }}</div>
+    </div>
+
+    <div class="body">
+      {% if jobs %}
+        {% set sources = jobs | map(attribute='source') | unique | list %}
+        {% for source in sources %}
+          <div class="group-label">{{ source }}</div>
+          {% for job in jobs if job.source == source %}
+          <div class="job-card">
+            <div class="job-title">
+              <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer">{{ job.title }}</a>
+            </div>
+            {% if job.company and job.company != 'See posting' %}
+            <div class="job-meta">&#x1F3E2; {{ job.company }}</div>
+            {% endif %}
+            {% if job.location and job.location != 'See posting' %}
+            <div class="job-meta">&#x1F4CD; {{ job.location }}</div>
+            {% endif %}
+            <div><span class="source-badge">{{ job.source }}</span></div>
+          </div>
+          {% endfor %}
+        {% endfor %}
+      {% else %}
+        <p style="color:#888; margin-top:12px;">No new listings today.</p>
+      {% endif %}
+    </div>
+
+    <div class="footer">
+      You're receiving this because you set up the Job Digest GitHub Action.<br/>
+      Disable the workflow in your repo to stop these emails.
+    </div>
+
+  </div>
+</body>
+</html>
