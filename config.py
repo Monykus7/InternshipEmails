@@ -162,13 +162,54 @@ LEVER_COMPANIES = [
 WORKDAY_COMPANIES = [
     # (display_name, workday_subdomain, career_site_path)
     # All entries verified reachable via the Workday REST search API (Aug 2026).
-    # Removed: Northrop Grumman, Lockheed Martin, Raytheon (require security clearance)
-    ("Boston Dynamics",  "bostondynamics", "Boston_Dynamics"),
-    ("Stryker",          "stryker",        "StrykerCareers"),
-    ("Medtronic",        "medtronic",      "MedtronicCareers"),
-    ("Applied Materials","amat",           "External"),
-    ("CrowdStrike",      "crowdstrike",    "crowdstrikecareers"),
-    ("Workday",          "workday",        "Workday"),
+    # Excluded: government/defense contractors (require clearance / US citizenship only).
+
+    # ── Robotics / Autonomy ───────────────────────────────────────────────────────
+    ("Boston Dynamics",      "bostondynamics",     "Boston_Dynamics"),
+    ("Rockwell Automation",  "rockwellautomation", "external_rockwell_automation"),
+
+    # ── Semiconductors / Hardware ─────────────────────────────────────────────────
+    ("Intel",                "intel",              "external"),
+    ("Micron",               "micron",             "External"),
+    ("NVIDIA",               "nvidia",             "NVIDIAExternalCareerSite"),
+    ("NXP Semiconductors",   "nxp",                "careers"),
+    ("Microchip Technology", "microchiphr",        "external"),
+    ("Applied Materials",    "amat",               "External"),
+    ("Altera",               "altera",             "altera"),
+
+    # ── Medical Devices / Healthcare ──────────────────────────────────────────────
+    ("Stryker",              "stryker",            "StrykerCareers"),
+    ("Medtronic",            "medtronic",          "MedtronicCareers"),
+    ("Johnson & Johnson",    "jj",                 "JJ"),
+    ("GE HealthCare",        "gehc",               "gehc_externalsite"),
+
+    # ── Industrial / Engineering ──────────────────────────────────────────────────
+    ("Moog",                 "moog",               "moog_external_career_site"),
+    ("BorgWarner",           "borgwarner",         "borgwarner_careers"),
+    ("GE Appliances",        "haier",              "ge_appliances"),
+    ("Pentair",              "pentair",            "pentair_careers"),
+    ("Aveva",                "aveva",              "aveva_careers"),
+    ("Schweitzer Engineering","selinc",            "sel"),
+    ("Brunswick",            "brunswick",          "search"),
+    ("Chamberlain Group",    "chamberlain",        "chamberlain_group"),
+
+    # ── Enterprise Software / Cloud ───────────────────────────────────────────────
+    ("Salesforce",           "salesforce",         "External_Career_Site"),
+    ("CrowdStrike",          "crowdstrike",        "crowdstrikecareers"),
+    ("Workday",              "workday",            "Workday"),
+    ("LiveRamp",             "liveramp",           "liverampcareers"),
+
+    # ── Finance / Banking ─────────────────────────────────────────────────────────
+    ("Capital One",          "capitalone",         "Capital_One"),
+    ("US Bank",              "usbank",             "us_bank_careers"),
+
+    # ── Tech / Consumer ───────────────────────────────────────────────────────────
+    ("HP",                   "hp",                 "exteu-ac-careersite"),
+    ("Dell",                 "dell",               "External"),
+    ("Tencent",              "tencent",            "tencent_careers"),
+    ("Uline",                "uline",              "uline_careers"),
+    ("Copart",               "copart",             "copart"),
+    ("Chevron",              "chevron",            "university"),
 ]
 
 NICHE_BOARDS = [
