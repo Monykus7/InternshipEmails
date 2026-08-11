@@ -12,8 +12,16 @@ TARGET_YEAR = "2027"
 TARGET_SEASON = "summer"
 
 # ── Digest target ─────────────────────────────────────────────────────────────
-# Aim for this many jobs per email, one per company.
-DIGEST_TARGET_COUNT = 20
+# Aim for this many jobs per email.
+DIGEST_TARGET_COUNT = 30
+
+# ── Per-company cap (season-aware) ────────────────────────────────────────────
+# Early in the recruiting cycle companies drop many roles at once.
+# Allow up to MAX_JOBS_PER_COMPANY_EARLY per company until EARLY_SEASON_CUTOFF,
+# then tighten to 1 per company so the digest stays diverse.
+MAX_JOBS_PER_COMPANY_EARLY = 2          # Aug – Nov (batch posting season)
+MAX_JOBS_PER_COMPANY_LATE  = 1          # Dec onwards (sparse new postings)
+EARLY_SEASON_CUTOFF = "2026-12-01"      # YYYY-MM-DD, update each cycle
 
 # ── Keywords ──────────────────────────────────────────────────────────────────
 KEYWORDS = {
@@ -142,12 +150,63 @@ GREENHOUSE_COMPANIES = [
     "retool",
 
     # ── Biotech / MedTech (software-heavy roles) ──────────────────────────────
-    "relativity",       # 1 intern posting
+    "relativity",       # Legal tech / ediscovery
     "benchling",        # Lab software platform
     "recursion",        # Biotech + ML
+    "twistbioscience",  # Synthetic biology
+    "ginkgobioworks",   # Biotech / cell engineering
+
+    # ── Robotics / Autonomy (startups) ────────────────────────────────────────
+    "figureai",         # Humanoid robots (BMW partnership)
+    "maymobility",      # Autonomous vehicles
+    "locusrobotics",    # Warehouse robots
+    "gatherai",         # Warehouse drone robots
+    "outrider",         # Autonomous yard trucks
+    "formic",           # Manufacturing automation
+
+    # ── Space / Aerospace ─────────────────────────────────────────────────────
+    "rocketlab",        # Launch vehicles + spacecraft
+    "archer",           # eVTOL (electric aircraft)
+
+    # ── AI Chips / Hardware ───────────────────────────────────────────────────
+    "tenstorrentuniversity",  # AI chip startup (Jim Keller)
+
+    # ── Quant / HFT ───────────────────────────────────────────────────────────
+    "drweng",           # DRW — quant trading
+    "virtu",            # Virtu Financial — HFT
+    "pdtpartners",      # PDT Partners — quant
+    "optiver",          # Optiver — market maker
+
+    # ── Data / Analytics infra ────────────────────────────────────────────────
+    "fivetran",         # Data pipeline
+    "starburst",        # Distributed SQL / Trino
+    "imply",            # Druid / real-time analytics
+    "planetscale",      # Serverless MySQL
+
+    # ── Logistics / Supply chain ──────────────────────────────────────────────
+    "flexport",         # Digital freight forwarding
+    "project44",        # Supply chain visibility
+
+    # ── Construction / Field tech ─────────────────────────────────────────────
+    "fieldwire",        # Construction management
+
+    # ── Cybersecurity ─────────────────────────────────────────────────────────
+    "orca",             # Cloud security (agentless)
+
+    # ── Climate tech ──────────────────────────────────────────────────────────
+    "watershed",        # Carbon accounting platform
+
+    # ── AI research ───────────────────────────────────────────────────────────
+    "imbue",            # AI research (reasoning)
+
+    # ── HR / Finance tech ─────────────────────────────────────────────────────
+    "justworks",        # HR / payroll platform
+
+    # ── Physical security / IoT ───────────────────────────────────────────────
+    "axon",             # Axon (body cameras, Tasers — strong SWE program)
 
     # ── Other tech ────────────────────────────────────────────────────────────
-    "toast",            # 6 intern postings — restaurant SaaS
+    "toast",            # Restaurant SaaS
     "gusto",
     "carta",
     "lattice",
@@ -157,6 +216,12 @@ GREENHOUSE_COMPANIES = [
 # Slugs verified against https://api.lever.co/v0/postings/{slug}?mode=json
 LEVER_COMPANIES = [
     "zoox",
+    "aeva",                # Lidar / 4D imaging sensor tech
+    "belvederetrading",    # Quant trading firm
+    "diversified-automation",  # Industrial automation integrator
+    "increase",            # Banking-as-a-service API
+    "mistral",             # Mistral AI (European LLM lab)
+    "plaid",               # Fintech data connectivity
 ]
 
 WORKDAY_COMPANIES = [

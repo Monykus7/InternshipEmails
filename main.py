@@ -14,6 +14,7 @@ For local dev, create a .env file (never commit it):
 
 import logging
 import sys
+from datetime import date
 
 from dotenv import load_dotenv
 
@@ -94,8 +95,24 @@ def main() -> int:
     # so tomorrow's digest only shows truly fresh postings.
     save_seen(updated_seen)
 
-    # ── Company-level selection: 1 job per company, best CS match first ───────
-    digest_jobs = select_best_per_company(new_jobs, target_count=config.DIGEST_TARGET_COUNT)
+    # ── Season-aware per-company cap ─────────────────────────────────────────
+    cutoff = date.fromisoformat(config.EARLY_SEASON_CUTOFF)
+    max_per_co = (
+        config.MAX_JOBS_PER_COMPANY_EARLY
+        if date.today() < cutoff
+        else config.MAX_JOBS_PER_COMPANY_LATE
+    )
+    logger.info(
+        "Per-company cap: %d  (cutoff %s, today %s)",
+        max_per_co, cutoff, date.today(),
+    )
+
+    # ── Company-level selection: best CS match, season-aware cap ─────────────
+    digest_jobs = select_best_per_company(
+        new_jobs,
+        target_count=config.DIGEST_TARGET_COUNT,
+        max_per_company=max_per_co,
+    )
     logger.info(
         "Selected %d jobs across %d unique companies for digest.",
         len(digest_jobs),

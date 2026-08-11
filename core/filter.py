@@ -96,35 +96,43 @@ def filter_jobs(
     return filtered
 
 
-def select_best_per_company(jobs: list[dict], target_count: int = 20) -> list[dict]:
+def select_best_per_company(
+    jobs: list[dict],
+    target_count: int = 20,
+    max_per_company: int = 1,
+) -> list[dict]:
     """
-    Return up to *target_count* jobs, at most one per company.
+    Return up to *target_count* jobs, at most *max_per_company* per company.
 
     Selection strategy:
     1. Group jobs by company name (case-insensitive).
-    2. Within each company, pick the job with the highest relevance score
-       for a junior CS student (software engineering > product management, etc.).
-    3. Sort companies by their best job's score (descending) so the most
-       relevant internships appear first in the digest.
+    2. Within each company, rank by relevance score and keep the top
+       *max_per_company* roles (best CS match first).
+    3. Sort all kept jobs by score (descending) so the most relevant roles
+       appear first in the digest.
     4. Cap at *target_count*.
+
+    Setting max_per_company=2 during early recruiting season lets you see
+    multiple strong roles from a company that just dropped a batch of listings,
+    while max_per_company=1 later keeps the digest diversified.
     """
-    # Normalise company names for grouping
     company_map: dict[str, list[dict]] = {}
     for job in jobs:
         key = job["company"].lower().strip()
         company_map.setdefault(key, []).append(job)
 
-    best_per_company: list[dict] = []
+    selected: list[dict] = []
     for company_jobs in company_map.values():
-        best = max(company_jobs, key=lambda j: _relevance_score(j["title"]))
-        best["_score"] = _relevance_score(best["title"])
-        best_per_company.append(best)
+        # Sort within company by relevance, take the top N
+        ranked = sorted(company_jobs, key=lambda j: _relevance_score(j["title"]), reverse=True)
+        for job in ranked[:max_per_company]:
+            job["_score"] = _relevance_score(job["title"])
+            selected.append(job)
 
-    # Sort by score descending, then alphabetically for ties
-    best_per_company.sort(key=lambda j: (-j["_score"], j["company"].lower()))
+    # Sort globally by score descending, then alphabetically for ties
+    selected.sort(key=lambda j: (-j["_score"], j["company"].lower()))
 
-    # Clean up internal score key before returning
-    result = best_per_company[:target_count]
+    result = selected[:target_count]
     for job in result:
         job.pop("_score", None)
 
