@@ -9,6 +9,8 @@ Both platforms expose a free, public JSON API — no login required.
 import logging
 
 import requests
+from core.filter import matches_role
+from core.text import html_text
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +21,16 @@ _LEVER_BASE = "https://api.lever.co/v0/postings/{company}?mode=json"
 def fetch_greenhouse_jobs(companies: list[str], keywords: list[str]) -> list[dict]:
     """Return keyword-matching jobs from Greenhouse for every listed company."""
     jobs: list[dict] = []
-    kw_lower = [k.lower() for k in keywords]
 
     for company in companies:
         url = _GREENHOUSE_BASE.format(company=company)
         try:
-            data = requests.get(url, timeout=15).json()
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            data = response.json()
             for job in data.get("jobs", []):
                 title = job.get("title", "")
-                if not any(kw in title.lower() for kw in kw_lower):
+                if not matches_role(title, keywords):
                     continue
                 jobs.append({
                     "title": title,
@@ -35,6 +38,7 @@ def fetch_greenhouse_jobs(companies: list[str], keywords: list[str]) -> list[dic
                     "location": job.get("location", {}).get("name", ""),
                     "url": job.get("absolute_url", ""),
                     "source": "Greenhouse",
+                    "description": html_text(job.get("content", "")),
                 })
         except Exception as exc:  # noqa: BLE001
             logger.warning("Greenhouse error for '%s': %s", company, exc)
@@ -46,7 +50,6 @@ def fetch_greenhouse_jobs(companies: list[str], keywords: list[str]) -> list[dic
 def fetch_lever_jobs(companies: list[str], keywords: list[str]) -> list[dict]:
     """Return keyword-matching jobs from Lever for every listed company."""
     jobs: list[dict] = []
-    kw_lower = [k.lower() for k in keywords]
 
     for company in companies:
         url = _LEVER_BASE.format(company=company)
@@ -69,7 +72,7 @@ def fetch_lever_jobs(companies: list[str], keywords: list[str]) -> list[dict]:
                 if not isinstance(posting, dict):
                     continue
                 title = posting.get("text", "")
-                if not any(kw in title.lower() for kw in kw_lower):
+                if not matches_role(title, keywords):
                     continue
                 jobs.append({
                     "title": title,
@@ -77,6 +80,12 @@ def fetch_lever_jobs(companies: list[str], keywords: list[str]) -> list[dict]:
                     "location": posting.get("categories", {}).get("location", ""),
                     "url": posting.get("hostedUrl", ""),
                     "source": "Lever",
+                    "description": html_text(
+                        posting.get("description", "") + "\n" + "\n".join(
+                            section.get("text", "") + "\n" + section.get("content", "")
+                            for section in posting.get("lists", [])
+                        ) + "\n" + posting.get("additional", ""),
+                    ),
                 })
         except Exception as exc:  # noqa: BLE001
             logger.warning("Lever error for '%s': %s", company, exc)

@@ -6,14 +6,23 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL", "adityamahesh16@gmail.com")
 # GMAIL_APP_PASSWORD is loaded from env (GitHub Actions secret / local .env)
 
 # ── Cohort targeting ──────────────────────────────────────────────────────────
-# Jobs explicitly naming a *different* year are dropped.
-# Jobs with no year in the title are always kept.
+# Explicitly different internship years/seasons are dropped.
 TARGET_YEAR = "2027"
 TARGET_SEASON = "summer"
 
+# Applicant eligibility. Unknown authorization is flagged in the email.
+APPLICANT = {
+    "degree_level": "bachelors",  # bachelors, masters, or phd
+    "us_only": True,
+    "major": "computer science",
+    "needs_sponsorship": None,   # True / False
+    "us_citizen": None,          # True / False
+    "require_description": True,  # Exclude jobs whose requirements cannot be read
+}
+
 # ── Digest target ─────────────────────────────────────────────────────────────
-# Aim for this many jobs per email.
-DIGEST_TARGET_COUNT = 30
+# Maximum jobs per email. Every run sends, even with zero matching jobs.
+DIGEST_TARGET_COUNT = 20
 
 # ── Per-company cap (season-aware) ────────────────────────────────────────────
 # Early in the recruiting cycle companies drop many roles at once.

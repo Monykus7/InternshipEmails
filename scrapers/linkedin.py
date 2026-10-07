@@ -94,7 +94,7 @@ def fetch_linkedin_jobs(
         if resp is None:
             logger.error("Skipping LinkedIn keyword '%s' after repeated failures.", kw)
             continue
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = BeautifulSoup(resp.text, "html.parser")
         jobs = _parse_cards(soup)
         logger.info("LinkedIn '%s' → %d results", kw, len(jobs))
         all_jobs.extend(jobs)

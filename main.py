@@ -2,7 +2,7 @@
 Job Digest — entrypoint.
 
 Orchestrates all scrapers, applies filtering and deduplication,
-then sends a Gmail digest if new listings are found.
+then sends a Gmail digest on every scheduled run, including empty digests.
 
 Usage (local):
     export GMAIL_APP_PASSWORD=<your-16-char-app-password>
@@ -22,8 +22,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import config
-from core.deduplicator import deduplicate, load_seen, save_seen
+from core.deduplicator import deduplicate, load_seen, save_seen, merge_job_details
 from core.email_sender import send_digest
+from core.details import enrich_jobs
 from core.filter import filter_jobs, select_best_per_company
 from scrapers.greenhouse import fetch_greenhouse_jobs, fetch_lever_jobs
 from scrapers.linkedin import fetch_linkedin_jobs
@@ -77,23 +78,28 @@ def main() -> int:
 
     logger.info("Total raw results: %d", len(all_jobs))
 
-    # ── Keyword + year filter ─────────────────────────────────────────────────
+    # First discard clear mismatches, then retrieve requirements for remaining
+    # unseen candidates before applying the complete applicant profile.
+    seen = load_seen()
     filtered = filter_jobs(
-        all_jobs,
+        merge_job_details(all_jobs),
         config.KEYWORDS,
         target_year=config.TARGET_YEAR,
         target_season=config.TARGET_SEASON,
+        applicant={**config.APPLICANT, "require_description": False},
     )
-    logger.info("After keyword + year filter: %d", len(filtered))
+    candidates, _ = deduplicate(filtered, seen)
+    filtered = filter_jobs(
+        enrich_jobs(candidates), config.KEYWORDS,
+        target_year=config.TARGET_YEAR,
+        target_season=config.TARGET_SEASON,
+        applicant=config.APPLICANT,
+    )
+    logger.info("After eligibility screening: %d", len(filtered))
 
     # ── URL-level deduplication (skip jobs already sent on a previous day) ────
-    seen = load_seen()
-    new_jobs, updated_seen = deduplicate(filtered, seen)
+    new_jobs, _ = deduplicate(filtered, seen)
     logger.info("New (unseen) jobs: %d", len(new_jobs))
-
-    # Save ALL new jobs to the cache now (including ones we won't email today),
-    # so tomorrow's digest only shows truly fresh postings.
-    save_seen(updated_seen)
 
     # ── Season-aware per-company cap ─────────────────────────────────────────
     cutoff = date.fromisoformat(config.EARLY_SEASON_CUTOFF)
@@ -116,14 +122,15 @@ def main() -> int:
     logger.info(
         "Selected %d jobs across %d unique companies for digest.",
         len(digest_jobs),
-        len(digest_jobs),
+        len({job["company"].lower() for job in digest_jobs}),
     )
 
-    if digest_jobs:
-        send_digest(digest_jobs, config.TARGET_EMAIL, config.SENDER_EMAIL)
-        logger.info("Done — sent digest with %d listings.", len(digest_jobs))
-    else:
-        logger.info("No new listings today — no email sent.")
+    send_digest(digest_jobs, config.TARGET_EMAIL, config.SENDER_EMAIL)
+    # Only successfully delivered listings become seen. Overflow stays available
+    # for the next run, and an SMTP failure leaves the cache untouched.
+    _, delivered_seen = deduplicate(digest_jobs, seen)
+    save_seen(delivered_seen)
+    logger.info("Done — sent digest with %d listings.", len(digest_jobs))
 
     return 0
 

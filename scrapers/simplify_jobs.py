@@ -18,9 +18,11 @@ making it one of the freshest sources for Summer 2027 intern listings.
 
 import logging
 import re
+from urllib.parse import urlsplit
 
 import requests
 from bs4 import BeautifulSoup
+from core.filter import matches_role
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +30,6 @@ _README_URL = (
     "https://raw.githubusercontent.com/SimplifyJobs/"
     "Summer2027-Internships/dev/README.md"
 )
-
-# Prefer direct application links; fall back to Simplify redirect
-_SIMPLIFY_REDIRECT_RE = re.compile(r"utm_source=Simplify")
 
 
 def _clean_company(cell_text: str) -> str:
@@ -46,7 +45,7 @@ def _best_link(td) -> str:
     Prefers a direct employer link over the Simplify short-link.
     """
     links = td.find_all("a", href=True)
-    direct = [a["href"] for a in links if not _SIMPLIFY_REDIRECT_RE.search(a["href"])]
+    direct = [a["href"] for a in links if urlsplit(a["href"]).hostname not in {"simplify.jobs", "www.simplify.jobs"}]
     if direct:
         return direct[0]
     if links:
@@ -59,8 +58,6 @@ def fetch_simplify_jobs(keywords: list[str]) -> list[dict]:
     Parse the SimplifyJobs Summer 2027 GitHub README and return
     keyword-matching internship listings.
     """
-    kw_lower = [k.lower() for k in keywords]
-
     try:
         resp = requests.get(_README_URL, timeout=15)
         resp.raise_for_status()
@@ -68,7 +65,7 @@ def fetch_simplify_jobs(keywords: list[str]) -> list[dict]:
         logger.error("Could not fetch SimplifyJobs README: %s", exc)
         return []
 
-    soup = BeautifulSoup(resp.text, "lxml")
+    soup = BeautifulSoup(resp.text, "html.parser")
     rows = soup.find_all("tr")
 
     jobs: list[dict] = []
@@ -78,6 +75,8 @@ def fetch_simplify_jobs(keywords: list[str]) -> list[dict]:
         cells = row.find_all("td")
         if len(cells) < 4:
             continue
+
+        row_text = row.get_text(" ", strip=True)
 
         # ── Company ──────────────────────────────────────────────────────────
         company_td = cells[0]
@@ -105,11 +104,11 @@ def fetch_simplify_jobs(keywords: list[str]) -> list[dict]:
         # ── Apply URL ─────────────────────────────────────────────────────────
         apply_td = cells[3]
         url = _best_link(apply_td)
-        if not url:
+        if not url or "🔒" in row_text:
             continue
 
         # ── Keyword filter ────────────────────────────────────────────────────
-        if not any(kw in title.lower() for kw in kw_lower):
+        if not matches_role(title, keywords):
             continue
 
         jobs.append({
@@ -118,6 +117,11 @@ def fetch_simplify_jobs(keywords: list[str]) -> list[dict]:
             "location": location,
             "url": url,
             "source": "SimplifyJobs",
+            "cohort_year": "2027",
+            "cohort_season": "summer",
+            "advanced_degree_required": "🎓" in row_text,
+            "no_sponsorship": "🛂" in row_text,
+            "us_citizenship_required": "🇺🇸" in row_text,
         })
 
     logger.info("SimplifyJobs → %d keyword-matching listings", len(jobs))

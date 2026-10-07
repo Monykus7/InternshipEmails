@@ -9,6 +9,7 @@ import logging
 import os
 import smtplib
 from datetime import date
+from pathlib import Path
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -21,7 +22,9 @@ _SMTP_PORT = 465
 
 
 def _build_plain_text(jobs: list[dict]) -> str:
-    lines = [f"Daily Internship Digest — {date.today().strftime('%B %d, %Y')}", ""]
+    lines = [f"Internship Digest — {date.today().strftime('%B %d, %Y')}", ""]
+    if not jobs:
+        lines.append("No new matching internships found this run. The finder checks every six hours.")
     for job in jobs:
         lines += [
             job["title"],
@@ -31,6 +34,7 @@ def _build_plain_text(jobs: list[dict]) -> str:
             f"  URL:      {job['url']}",
             "",
         ]
+        lines.extend(f"  Check: {note}" for note in job.get("eligibility_notes", []))
     lines.append("Disable the GitHub Actions workflow to stop receiving these emails.")
     return "\n".join(lines)
 
@@ -48,7 +52,7 @@ def send_digest(jobs: list[dict], to_email: str, from_email: str) -> None:
             "Create a Gmail App Password and export it before running."
         )
 
-    env = Environment(loader=FileSystemLoader("templates"), autoescape=True)
+    env = Environment(loader=FileSystemLoader(Path(__file__).resolve().parent.parent / "templates"), autoescape=True)
     template = env.get_template("digest.html")
     html_body = template.render(jobs=jobs, date=date.today().strftime("%B %d, %Y"))
     plain_body = _build_plain_text(jobs)

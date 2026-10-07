@@ -8,6 +8,7 @@ Current sources:
 import logging
 
 import feedparser
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ def fetch_ros_jobs(keywords: list[str]) -> list[dict]:
                     "location": "See posting",
                     "url": entry.get("link", ""),
                     "source": "ROS Discourse",
+                    "description": BeautifulSoup(summary, "html.parser").get_text("\n", strip=True),
                 })
     except Exception as exc:  # noqa: BLE001
         logger.warning("ROS Discourse feed error: %s", exc)

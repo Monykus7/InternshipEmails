@@ -14,9 +14,8 @@ e.g. "Northrop_Grumman_External_Site" for Northrop Grumman.
 """
 
 import logging
-
-from playwright.sync_api import TimeoutError as PlaywrightTimeout
-from playwright.sync_api import sync_playwright
+from urllib.parse import urljoin
+from core.filter import matches_role
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +35,8 @@ def _try_load(page, subdomain: str, site_path: str) -> str | None:
     Try wd1 → wd3 → wd5 with the given site_path.
     Returns the first URL whose page successfully renders job title elements.
     """
+    from playwright.sync_api import TimeoutError as PlaywrightTimeout
+
     for wdn in _WD_NUMBERS:
         url = f"https://{subdomain}.{wdn}.myworkdayjobs.com/en-US/{site_path}"
         try:
@@ -60,7 +61,8 @@ def fetch_workday_jobs(
                    as defined in config.WORKDAY_COMPANIES.
         keywords:  Role keyword strings to match against job titles.
     """
-    kw_lower = [k.lower() for k in keywords]
+    from playwright.sync_api import sync_playwright
+
     jobs: list[dict] = []
 
     with sync_playwright() as pw:
@@ -89,18 +91,23 @@ def fetch_workday_jobs(
                 cards = page.query_selector_all(_JOB_TITLE_SELECTOR)
                 for card in cards:
                     title = card.inner_text().strip()
-                    if any(kw in title.lower() for kw in kw_lower):
+                    if matches_role(title, keywords):
                         # Try to get a direct link to the posting
-                        link_el = card.query_selector("a")
-                        job_url = resolved_url
+                        link_el = card if card.get_attribute("href") else card.query_selector("a")
+                        job_url = ""
                         if link_el:
                             href = link_el.get_attribute("href")
                             if href:
-                                job_url = href if href.startswith("http") else f"https://{subdomain}.wd1.myworkdayjobs.com{href}"
+                                job_url = urljoin(resolved_url, href)
+                        # A careers landing page isn't an application link.
+                        if not job_url:
+                            continue
+                        container = card.evaluate("el => el.closest('li')?.innerText || ''")
+                        location = "\n".join(line.strip() for line in container.splitlines() if line.strip() != title)
                         jobs.append({
                             "title": title,
                             "company": company_name,
-                            "location": "",
+                            "location": location,
                             "url": job_url,
                             "source": "Workday",
                         })

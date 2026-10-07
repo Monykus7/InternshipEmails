@@ -10,6 +10,7 @@ import json
 import logging
 import pathlib
 from datetime import date, timedelta
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,28 @@ MAX_AGE_DAYS = 30
 
 
 def _job_id(job: dict) -> str:
-    return hashlib.md5(job["url"].encode()).hexdigest()
+    parts = urlsplit(job["url"])
+    query = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True)
+             if not key.lower().startswith("utm_") and key.lower() not in {"ref", "source", "referrer"}]
+    url = urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"),
+                     urlencode(sorted(query)), ""))
+    return hashlib.md5(url.encode()).hexdigest()
+
+
+def merge_job_details(jobs: list[dict]) -> list[dict]:
+    """Combine duplicate source metadata before screening or fetching details."""
+    merged = {}
+    for job in jobs:
+        jid = _job_id(job)
+        previous = merged.get(jid, {})
+        combined = {**previous, **job}
+        if previous.get("description") and not job.get("description"):
+            combined["description"] = previous["description"]
+        for key in ("advanced_degree_required", "no_sponsorship", "us_citizenship_required", "is_closed"):
+            if previous.get(key) or job.get(key):
+                combined[key] = True
+        merged[jid] = combined
+    return list(merged.values())
 
 
 def load_seen() -> dict[str, str]:
@@ -54,10 +76,12 @@ def deduplicate(
         (new_jobs, updated_seen)
     """
     today = date.today().isoformat()
+    updated_seen = seen.copy()
     new_jobs: list[dict] = []
     for job in jobs:
         jid = _job_id(job)
-        if jid not in seen:
+        legacy_id = hashlib.md5(job["url"].encode()).hexdigest()
+        if jid not in updated_seen and legacy_id not in updated_seen:
             new_jobs.append(job)
-            seen[jid] = today
-    return new_jobs, seen
+            updated_seen[jid] = today
+    return new_jobs, updated_seen

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Daily Internship Digest</title>
+  <title>Internship Digest</title>
   <style>
     /* Reset */
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -123,11 +123,14 @@
             <div class="job-meta">&#x1F4CD; {{ job.location }}</div>
             {% endif %}
             <div><span class="source-badge">{{ job.source }}</span></div>
+            {% for note in job.eligibility_notes | default([]) %}
+            <div class="job-meta">{{ note }}</div>
+            {% endfor %}
           </div>
           {% endfor %}
         {% endfor %}
       {% else %}
-        <p style="color:#888; margin-top:12px;">No new listings today.</p>
+        <p style="color:#888; margin-top:12px;">No new matching internships found this run. The finder checks every six hours.</p>
       {% endif %}
     </div>
 

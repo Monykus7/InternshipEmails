@@ -1,10 +1,14 @@
-name: Daily Job Digest
+name: Internship Digest (Every 6 Hours)
 
 on:
   schedule:
-    # 6:00 AM Pacific (UTC-7 summer / UTC-8 winter) → 13:00 UTC
-    - cron: "0 13 * * *"
+    # Six hours apart year-round, away from the busy start of the hour.
+    - cron: "17 1,7,13,19 * * *"
   workflow_dispatch: # allows manual trigger from the GitHub Actions UI
+
+concurrency:
+  group: internship-digest
+  cancel-in-progress: false
 
 jobs:
   run-digest:
@@ -43,8 +47,10 @@ jobs:
         run: playwright install chromium
 
       - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: playwright install-deps chromium
+
+      - name: Test finder and delivery logic
+        run: python -m unittest discover -s tests -v
 
       - name: Run digest
         env:

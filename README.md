@@ -1,240 +1,92 @@
 # Summer 2027 Internship Digest
 
-A daily email digest of **Summer 2027 SWE, ML, Data Science, and Robotics internships** — scraped from the [SimplifyJobs community list](https://github.com/SimplifyJobs/Summer2027-Internships), LinkedIn, Greenhouse, Lever, Workday, and ROS Discourse, then delivered to your Gmail every morning at **6 AM Pacific** via GitHub Actions.
+Find US software engineering, ML, data science and robotics internships for a CS bachelor's student, and email a digest every six hours via GitHub Actions.
 
-Each digest contains **up to 20 jobs, one per company**, ranked by relevance to a junior CS student.
+Each email contains **0–20 new matching jobs**. Twenty is a maximum, never a minimum. Empty runs send a brief no-matches email. Companies contribute up to two jobs before December 1, 2026, and one afterwards.
 
----
+## How screening works
 
-## Project Structure
+The finder requires an internship title and positive US location evidence, rejects explicitly different internship years/seasons, and checks readable employer requirements for advanced-degree and incompatible-major requirements. Simplify's advanced-degree, citizenship, sponsorship and closed-application markers are preserved. Employer application links are preferred over aggregator links.
 
-```
-InternshipEmails/
-├── .github/
-│   └── workflows/
-│       └── daily_digest.yml      # GitHub Actions cron (6 AM Pacific daily)
-├── scrapers/
-│   ├── simplify_jobs.py          # SimplifyJobs/Pitt CSC 2027 GitHub list ← primary source
-│   ├── linkedin.py               # LinkedIn public job search
-│   ├── greenhouse.py             # Greenhouse + Lever JSON APIs
-│   ├── workday.py                # Workday (Playwright headless browser)
-│   └── niche_boards.py           # ROS Discourse RSS feed
-├── core/
-│   ├── filter.py                 # Keyword filter + company-level selection
-│   ├── deduplicator.py           # JSON-backed seen-jobs cache (30-day TTL)
-│   └── email_sender.py           # Gmail SMTP sender with HTML + plain-text
-├── templates/
-│   └── digest.html               # Jinja2 HTML email template
-├── data/
-│   └── seen_jobs.json            # Persisted job cache — auto-committed by CI
-├── config.py                     # All settings: email, keywords, companies
-├── main.py                       # Orchestrator entrypoint
-├── requirements.txt
-└── .env                          # Local secrets — never commit this
+Requirements come from Greenhouse/Lever APIs or public employer pages (structured JobPosting data and supported description selectors). Postings with unreadable requirements are excluded by default. Bare `Remote`, `See posting` and unknown locations are excluded because US eligibility cannot be confirmed.
+
+This is a conservative text filter. Requirement wording varies, and passing the filter does not establish every aspect of eligibility. Graduation dates and enrollment conditions still need checking. Sponsorship and citizenship restrictions are labelled until you configure your status. Missing internship-term information is also labelled.
+
+Configure your profile in [config.py](config.py):
+
+```python
+APPLICANT = {
+    "degree_level": "bachelors",
+    "us_only": True,
+    "major": "computer science",
+    "needs_sponsorship": None,  # True or False when known
+    "us_citizen": None,         # True or False when known
+    "require_description": True,
+}
+DIGEST_TARGET_COUNT = 20
 ```
 
----
+The cache records **only successfully emailed jobs**. Jobs above the digest/company cap remain eligible for later runs; SMTP failure leaves the cache unchanged. Tracking parameters are ignored for deduplication, while job-identifying parameters such as `gh_jid` are preserved. Entries expire after 30 days, so still-open jobs can reappear after that period. Cache entries already recorded by older versions cannot distinguish sent jobs from discarded overflow.
 
-## One-Time Setup
+## Local setup
 
-### Step 1 — Clone the repo
+Use Python 3.11 or later:
 
-```bash
-git clone https://github.com/<your-username>/InternshipEmails.git
-cd InternshipEmails
-```
-
-### Step 2 — Create a virtual environment
-
-```bash
+```powershell
 python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-```
-
-### Step 3 — Install dependencies
-
-```bash
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 playwright install chromium
 ```
 
-### Step 4 — Configure your email
+Set `TARGET_EMAIL` and `SENDER_EMAIL` in the environment or `config.py`. Create a Gmail App Password for the sender account and put it in a local `.env` file:
 
-Open `config.py` and set your Gmail address on lines 4–5:
-
-```python
-TARGET_EMAIL = os.getenv("TARGET_EMAIL", "you@gmail.com")
-SENDER_EMAIL = os.getenv("SENDER_EMAIL", "you@gmail.com")
+```text
+GMAIL_APP_PASSWORD=your-app-password
 ```
 
-Both should be the **same Gmail account** that owns the App Password.
+`.env` must remain uncommitted. See [Google's App Password instructions](https://support.google.com/accounts/answer/185833).
 
-### Step 5 — Create a Gmail App Password
+Run tests without sending email:
 
-> Regular Gmail passwords won't work. You need an App Password.
-
-1. Go to [myaccount.google.com/security](https://myaccount.google.com/security)
-2. Enable **2-Step Verification** if not already on
-3. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-4. Create a new App Password → name it anything (e.g. "Job Digest")
-5. Copy the **16-character** code (no spaces)
-
-### Step 6 — Create your local `.env` file
-
-```bash
-# In the project root — never commit this file
-echo GMAIL_APP_PASSWORD=abcdabcdabcdabcd > .env
+```powershell
+python -m unittest discover -s tests -v
 ```
 
-Replace `abcdabcdabcdabcd` with your actual 16-character App Password (no spaces).
+Run the finder and send a real email:
 
-### Step 7 — Run a local test
-
-```bash
+```powershell
 python main.py
 ```
 
-Expected output:
+## Scheduled delivery
 
-```
-18:20:01 [INFO] __main__: ── Scraping SimplifyJobs 2027 list …
-18:20:03 [INFO] scrapers.simplify_jobs: SimplifyJobs → 137 keyword-matching listings
-18:20:03 [INFO] __main__: ── Scraping LinkedIn …
-...
-18:22:15 [INFO] __main__: Total raw results: 750
-18:22:15 [INFO] __main__: After keyword + year filter: 140
-18:22:15 [INFO] __main__: New (unseen) jobs: 140
-18:22:15 [INFO] __main__: Selected 20 jobs across 20 unique companies for digest.
-18:22:16 [INFO] core.email_sender: Digest sent to you@gmail.com (20 jobs).
-```
+The workflow is [.github/workflows/daily_digest.yml](.github/workflows/daily_digest.yml), named **Internship Digest (Every 6 Hours)**.
 
-Check your inbox — you should receive the digest within a few seconds.
+1. Put the updated workflow and source on the repository's default branch.
+2. Add the `GMAIL_APP_PASSWORD` repository secret in **Settings → Secrets and variables → Actions**.
+3. Use **Actions → Internship Digest (Every 6 Hours) → Run workflow** to verify delivery.
 
-> **Runtime:** ~3–4 minutes total. LinkedIn takes the longest (polite delays between keyword searches). Workday uses a real browser (Playwright) and adds another minute.
+The UTC schedule is **01:17, 07:17, 13:17 and 19:17**. Pacific times are 12:17 AM, 6:17 AM, 12:17 PM and 6:17 PM during daylight saving time; they shift one hour earlier during standard time. Scheduling away from the start of the hour reduces contention. GitHub schedules can still be delayed or skipped, and scheduled workflows run only from the default branch; see [GitHub's schedule documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
----
+Concurrent workflow runs are serialized to protect delivery state. Each successful run commits `data/seen_jobs.json` back to the repository. Playwright system dependencies are installed on every fresh runner, even when browser downloads are cached.
 
-## GitHub Actions Setup (Automated Daily Runs)
+## Project files
 
-Once the local test passes, push to GitHub and configure the secret so it runs automatically every morning.
-
-### Step 1 — Push the repo to GitHub
-
-```bash
-git add .
-git commit -m "Initial setup"
-git push
-```
-
-> **Do not commit `.env`** — it is already in `.gitignore`.
-
-### Step 2 — Add the GitHub Actions secret
-
-1. Open your repo on GitHub
-2. Go to **Settings → Secrets and variables → Actions**
-3. Click **New repository secret**
-4. Name: `GMAIL_APP_PASSWORD`
-5. Value: your 16-character App Password (no spaces)
-6. Click **Add secret**
-
-### Step 3 — Trigger a manual run to verify
-
-1. Go to **Actions** tab in your repo
-2. Select **Daily Job Digest**
-3. Click **Run workflow → Run workflow**
-4. Watch the logs — it should complete and send an email
-
-### Step 4 — Let it run automatically
-
-The workflow is scheduled at `0 13 * * *` UTC = **6:00 AM Pacific (PDT)**.
-
-After each run, GitHub Actions automatically commits an updated `seen_jobs.json` back to the repo so duplicates are never emailed again. You don't need to do anything.
-
----
-
-## Customisation
-
-### Change target year / season
-
-In `config.py`:
-
-```python
-TARGET_YEAR = "2027"
-TARGET_SEASON = "summer"
-```
-
-### Adjust how many jobs per digest
-
-```python
-DIGEST_TARGET_COUNT = 20   # up to this many, one per company
-```
-
-### Add / remove role keywords
-
-Edit the `KEYWORDS["roles"]` list in `config.py`. The filter keeps a job only if its title contains **at least one** role keyword. The `"exclude"` list drops jobs whose title contains seniority terms.
-
-### Add more companies
-
-**Greenhouse** (free public API — no key needed):
-
-```bash
-# Verify a slug works before adding it to config
-curl https://boards-api.greenhouse.io/v1/boards/<slug>/jobs
-```
-
-Add the verified slug to `GREENHOUSE_COMPANIES` in `config.py`.
-
-**Lever** (same pattern):
-
-```bash
-curl "https://api.lever.co/v0/postings/<slug>?mode=json"
-```
-
-**Workday** — add a 3-tuple to `WORKDAY_COMPANIES`:
-
-```python
-("Company Name", "workday-subdomain", "Career_Site_Path")
-# e.g. the URL https://acme.wd1.myworkdayjobs.com/en-US/Careers
-# becomes: ("Acme Corp", "acme", "Careers")
-```
-
-### Change the send time
-
-In `.github/workflows/daily_digest.yml`, edit the cron expression:
-
-```yaml
-- cron: "0 13 * * *"   # 13:00 UTC = 6:00 AM Pacific
-```
-
-Use [crontab.guru](https://crontab.guru) to generate a new expression.
-
----
+- `main.py`: scraper orchestration, screening, selection, delivery and cache updates.
+- `config.py`: applicant profile, target term, keywords, sources and company lists.
+- `core/filter.py`: eligibility screening and per-company ranking.
+- `core/details.py`: public employer requirement retrieval.
+- `core/text.py`: HTML requirement-text extraction.
+- `core/deduplicator.py`: sent-job cache and URL deduplication.
+- `core/email_sender.py`, `templates/digest.html`: HTML and plain-text email.
+- `scrapers/`: SimplifyJobs, LinkedIn, Greenhouse, Lever, Workday and ROS sources.
+- `tests/test_finder.py`: filtering, scraper parsing, empty digests, overflow and SMTP failure checks.
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `SMTPAuthenticationError (535)` | Wrong or missing App Password | Re-generate at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords); paste without spaces |
-| `No new listings today` on first run | `seen_jobs.json` already populated from a previous run | Delete `data/seen_jobs.json` content (`{}`) and re-run |
-| Workday shows all warnings | Workday is down for maintenance or the `career_site_path` is wrong | Check the company's actual Workday URL and update the 3-tuple in `config.py` |
-| LinkedIn returns 0 results | LinkedIn blocked the request | The scraper retries with backoff automatically; try again in a few minutes |
-| Fewer than 20 jobs in digest | Not enough new listings matching filters that day | Normal — the list grows as more companies open 2027 roles in Aug–Sep |
-
----
-
-## Completion Checklist
-
-- [x] Repo cloned and virtual environment created
-- [x] `pip install -r requirements.txt` and `playwright install chromium` run
-- [x] Gmail address set in `config.py`
-- [x] `.env` file created with `GMAIL_APP_PASSWORD`
-- [x] Local `python main.py` test succeeded and email received
-- [ ] Repo pushed to GitHub
-- [ ] `GMAIL_APP_PASSWORD` secret added to GitHub Actions
-- [ ] Manual workflow trigger succeeded
-- [ ] Cron confirmed running at 6 AM Pacific
+- **No jobs in an email:** inspect `Filter exclusions` and `Retrieved requirements` logs. A sparse digest is expected when requirements or US locations cannot be verified.
+- **SMTP authentication fails:** check the Gmail App Password for the sender account.
+- **Workday fails:** check its site path, browser installation and system dependencies. The current scraper only inspects the first results page; pagination and searching internships directly would improve coverage.
+- **LinkedIn returns no jobs:** public search may be blocked. Its job cards need employer requirements enrichment before they can pass strict screening.
+- **Repeat jobs after a month:** the cache has a 30-day retention window; increase `MAX_AGE_DAYS` in `core/deduplicator.py` if desired.
