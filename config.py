@@ -16,7 +16,8 @@ APPLICANT = {
     "us_only": True,
     "major": "computer science",
     "needs_sponsorship": None,   # True / False
-    "us_citizen": None,          # True / False
+    "us_citizen": False,         # Applicant is not a US citizen
+    "us_person": None,           # Unknown export-control eligibility; restricted jobs are skipped
     "require_description": True,  # Exclude jobs whose requirements cannot be read
 }
 

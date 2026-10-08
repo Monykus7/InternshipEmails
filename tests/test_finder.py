@@ -77,6 +77,25 @@ class EligibilityTests(unittest.TestCase):
         self.assertEqual(self.screen(job(us_citizenship_required=True), us_citizen=False), [])
         self.assertTrue(self.screen(job(no_sponsorship=True))[0]["eligibility_notes"])
 
+    def test_non_citizen_rejects_citizenship_wording_in_either_order(self):
+        for description in ("Requires current U.S. citizenship due to contract requirements.",
+                            "U.S. citizenship is required.", "Must be a US citizen."):
+            self.assertEqual(self.screen(job(description=description)), [])
+        self.assertTrue(self.screen(job(description="US citizenship is not required.")))
+        self.assertTrue(self.screen(job(description="We do not require U.S. citizenship.")))
+        self.assertTrue(self.screen(job(description="No US citizenship required.")))
+
+    def test_av_export_and_contract_requirements_are_screened(self):
+        description = (
+            "Applicants must qualify as a U.S. person under the ITAR and EAR, or be approved for an export license. "
+            "A U.S. person is a citizen, lawful permanent resident, or protected individual. "
+            "Some positions will require current U.S. Citizenship due to contract requirements."
+        )
+        self.assertEqual(self.screen(job(description=description)), [])
+        self.assertEqual(self.screen(job(description="Applicants must qualify as a U.S. person under ITAR.")), [])
+        self.assertTrue(self.screen(job(description="Applicants must qualify as a U.S. person under ITAR."), us_person=True))
+        self.assertEqual(self.screen(job(description="This position requires U.S. citizenship."), us_person=True), [])
+
     def test_hyphenated_internship_is_matched(self):
         self.assertTrue(self.screen(job(title="Software-Engineering Internship - Summer 2027")))
 

@@ -12,7 +12,7 @@ The finder requires an internship title and positive US location evidence, rejec
 
 Requirements come from Greenhouse/Lever APIs or public employer pages (structured JobPosting data and supported description selectors). Postings with unreadable requirements are excluded by default. Bare `Remote`, `See posting` and unknown locations are excluded because US eligibility cannot be confirmed.
 
-This is a conservative text filter. Requirement wording varies, and passing the filter does not establish every aspect of eligibility. Graduation dates and enrollment conditions still need checking. Sponsorship and citizenship restrictions are labelled until you configure your status. Missing internship-term information is also labelled.
+This is a conservative text filter. Requirement wording varies, and passing the filter does not establish every aspect of eligibility. Graduation dates and enrollment conditions still need checking. The applicant is not a US citizen, so citizenship-required jobs are excluded. US-person/export-control restrictions are also excluded unless that separate eligibility is confirmed in the profile. Sponsorship restrictions are labelled until that status is configured. Missing internship-term information is also labelled.
 
 Configure your profile in [config.py](config.py):
 
@@ -22,7 +22,8 @@ APPLICANT = {
     "us_only": True,
     "major": "computer science",
     "needs_sponsorship": None,  # True or False when known
-    "us_citizen": None,         # True or False when known
+    "us_citizen": False,
+    "us_person": None,          # Unknown; export-restricted jobs are excluded
     "require_description": True,
 }
 DIGEST_TARGET_COUNT = 20

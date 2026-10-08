@@ -148,10 +148,21 @@ def _screen(job: dict, keywords: dict, target_year: str | None,
         r"\b(?:no (?:visa )?sponsorship|(?:cannot|will not|do not|does not|unable to) "
         r"(?:offer|provide|support)(?:\s+\w+){0,5}\s+(?:sponsorship|visas?)|"
         r"without (?:the need for )?(?:visa )?sponsorship)\b", text))
+    # Explicitly optional citizenship must not exclude otherwise eligible jobs.
+    citizenship_text = re.sub(
+        r"(?:do not|does not|doesn't|don't|not) require(?:s)? (?:current )?(?:u\.?s\.?|united states) citizenship|"
+        r"no (?:u\.?s\.?|united states) citizenship (?:is )?required", "", text
+    )
     citizen_only = job.get("us_citizenship_required") or bool(re.search(
         r"(?:must be (?:an? )?(?:u\.?s\.?|united states) citizen|"
         r"(?:u\.?s\.?|united states) citizenship (?:is )?required|"
-        r"(?:u\.?s\.?|united states) citizens only)", text))
+        r"(?:requires?|must have) (?:current )?(?:u\.?s\.?|united states) citizenship|"
+        r"(?:u\.?s\.?|united states) citizenship (?:is )?(?:mandatory|necessary)|"
+        r"(?:u\.?s\.?|united states) citizens only)", citizenship_text))
+    us_person_required = bool(re.search(
+        r"(?:must|requires?|need to|have to)(?:\s+\w+){0,6}\s+(?:a )?u\.?s\.? person|"
+        r"u\.?s\.? person(?:\s+\w+){0,5}\s+(?:required|requirement)|"
+        r"applicants must qualify as a u\.?s\.? person", text))
     if no_sponsorship:
         if applicant.get("needs_sponsorship") is True:
             return "no sponsorship", notes
@@ -162,6 +173,16 @@ def _screen(job: dict, keywords: dict, target_year: str | None,
             return "US citizenship required", notes
         if applicant.get("us_citizen") is None:
             notes.append("US citizenship required; confirm eligibility.")
+    if us_person_required:
+        if applicant.get("us_person") is not True:
+            return "US-person/export-control eligibility not confirmed", notes
+    # A noncitizen shouldn't receive a role whose citizenship requirement
+    # depends on an unspecified contract. This is uncertainty, not a claim
+    # that every export-controlled role requires citizenship.
+    if applicant.get("us_citizen") is False and re.search(
+        r"some positions(?:\s+\w+){0,6}\s+require(?:\s+\w+){0,3}\s+u\.?s\.? citizenship", text
+    ):
+        return "possible contract citizenship requirement", notes
     if not description:
         if applicant.get("require_description"):
             return "requirements unavailable", notes
