@@ -57,6 +57,7 @@ def _parse_cards(soup: BeautifulSoup) -> list[dict]:
             company_el = card.select_one(".base-search-card__subtitle")
             location_el = card.select_one(".job-search-card__location")
             link_el = card.select_one("a.base-card__full-link")
+            posted_el = card.select_one("time[datetime]")
 
             if not (title_el and link_el):
                 continue
@@ -67,6 +68,8 @@ def _parse_cards(soup: BeautifulSoup) -> list[dict]:
                 "location": location_el.text.strip() if location_el else "",
                 "url": link_el["href"].split("?")[0],  # strip tracking params
                 "source": "LinkedIn",
+                "posted_at": posted_el.get("datetime") if posted_el else None,
+                "posting_date_source": "LinkedIn posting date",
             })
         except Exception as exc:  # noqa: BLE001
             logger.debug("Failed to parse LinkedIn card: %s", exc)

@@ -14,6 +14,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from jinja2 import Environment, FileSystemLoader
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ _SMTP_PORT = 465
 def _build_plain_text(jobs: list[dict]) -> str:
     lines = [f"Internship Digest — {date.today().strftime('%B %d, %Y')}", ""]
     if not jobs:
-        lines.append("No new matching internships found this run. The finder checks every six hours.")
+        lines.append(f"No new matching internships with a reported posting date in the last {config.MAX_POSTING_AGE_HOURS} hours. The finder checks every six hours.")
     for job in jobs:
         lines += [
             job["title"],
@@ -32,6 +33,7 @@ def _build_plain_text(jobs: list[dict]) -> str:
             f"  Location: {job['location']}",
             f"  Source:   {job['source']}",
             f"  URL:      {job['url']}",
+            f"  Posted:   {job.get('posting_date_label', 'Unknown')} ({job.get('posting_date_source', 'Unknown source')})",
             "",
         ]
         lines.extend(f"  Check: {note}" for note in job.get("eligibility_notes", []))
@@ -54,7 +56,7 @@ def send_digest(jobs: list[dict], to_email: str, from_email: str) -> None:
 
     env = Environment(loader=FileSystemLoader(Path(__file__).resolve().parent.parent / "templates"), autoescape=True)
     template = env.get_template("digest.html")
-    html_body = template.render(jobs=jobs, date=date.today().strftime("%B %d, %Y"))
+    html_body = template.render(jobs=jobs, date=date.today().strftime("%B %d, %Y"), freshness_hours=config.MAX_POSTING_AGE_HOURS)
     plain_body = _build_plain_text(jobs)
 
     msg = MIMEMultipart("alternative")

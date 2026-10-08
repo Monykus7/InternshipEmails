@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 from bs4 import BeautifulSoup
 from core.text import html_text
+from core.freshness import parse_posted_at
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +26,21 @@ def _job_posting(value):
 
 def parse_details(html: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
+    details = {}
     for script in soup.select('script[type="application/ld+json"]'):
         try:
             postings = list(_job_posting(json.loads(script.get_text())))
         except (ValueError, TypeError):
             continue
         # A page listing multiple jobs isn't a single job description.
-        if len(postings) == 1 and postings[0].get("description"):
+        if len(postings) == 1:
             posting = postings[0]
-            details = {"description": html_text(posting["description"])}
+            if posting.get("description"):
+                details["description"] = html_text(posting["description"])
+            # dateModified/updated_at must not turn an old job into a new one.
+            if posting.get("datePosted"):
+                details["posted_at"] = posting["datePosted"]
+                details["posting_date_source"] = "Employer datePosted"
             locations = posting.get("jobLocation", [])
             if isinstance(locations, dict):
                 locations = [locations]
@@ -47,7 +54,8 @@ def parse_details(html: str) -> dict:
                                           ("addressLocality", "addressRegion", "addressCountry") if address.get(key)))
             if names:
                 details["location"] = "; ".join(names)
-            return details
+            if details.get("description"):
+                return details
     for selector in (
         "#content", ".job__description", ".posting-page .section-wrapper",
         "[data-automation-id='jobPostingDescription']", ".show-more-less-html__markup",
@@ -55,12 +63,12 @@ def parse_details(html: str) -> dict:
     ):
         blocks = soup.select(selector)
         if blocks:
-            return {"description": "\n".join(html_text(str(block)) for block in blocks)}
-    return {}
+            return {**details, "description": "\n".join(html_text(str(block)) for block in blocks)}
+    return details
 
 
 def _enrich(job: dict) -> dict:
-    if job.get("description"):
+    if job.get("description") and parse_posted_at(job.get("posted_at")):
         return job
     try:
         response = requests.get(job["url"], timeout=12, headers={"User-Agent": "InternshipDigest/1.0"})

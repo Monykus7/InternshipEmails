@@ -117,6 +117,9 @@ def fetch_simplify_jobs(keywords: list[str]) -> list[dict]:
             "location": location,
             "url": url,
             "source": "SimplifyJobs",
+            # Board age is evidence about the community list, not the employer's
+            # original publication time. Enrichment retrieves datePosted.
+            "source_age": cells[4].get_text(strip=True) if len(cells) > 4 else "",
             "cohort_year": "2027",
             "cohort_season": "summer",
             "advanced_degree_required": "🎓" in row_text,

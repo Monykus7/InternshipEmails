@@ -23,6 +23,7 @@ APPLICANT = {
 # ── Digest target ─────────────────────────────────────────────────────────────
 # Maximum jobs per email. Every run sends, even with zero matching jobs.
 DIGEST_TARGET_COUNT = 20
+MAX_POSTING_AGE_HOURS = 24  # Original publication time; undated jobs are excluded
 
 # ── Per-company cap (season-aware) ────────────────────────────────────────────
 # Early in the recruiting cycle companies drop many roles at once.

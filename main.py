@@ -25,6 +25,7 @@ import config
 from core.deduplicator import deduplicate, load_seen, save_seen, merge_job_details
 from core.email_sender import send_digest
 from core.details import enrich_jobs
+from core.freshness import filter_recent_jobs
 from core.filter import filter_jobs, select_best_per_company
 from scrapers.greenhouse import fetch_greenhouse_jobs, fetch_lever_jobs
 from scrapers.linkedin import fetch_linkedin_jobs
@@ -90,7 +91,7 @@ def main() -> int:
     )
     candidates, _ = deduplicate(filtered, seen)
     filtered = filter_jobs(
-        enrich_jobs(candidates), config.KEYWORDS,
+        filter_recent_jobs(enrich_jobs(candidates), config.MAX_POSTING_AGE_HOURS), config.KEYWORDS,
         target_year=config.TARGET_YEAR,
         target_season=config.TARGET_SEASON,
         applicant=config.APPLICANT,

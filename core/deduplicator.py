@@ -11,6 +11,7 @@ import logging
 import pathlib
 from datetime import date, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from core.freshness import parse_posted_at
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,11 @@ def merge_job_details(jobs: list[dict]) -> list[dict]:
         combined = {**previous, **job}
         if previous.get("description") and not job.get("description"):
             combined["description"] = previous["description"]
+        previous_date = parse_posted_at(previous.get("posted_at"))
+        incoming_date = parse_posted_at(job.get("posted_at"))
+        if previous_date and (not incoming_date or previous_date < incoming_date):
+            combined["posted_at"] = previous["posted_at"]
+            combined["posting_date_source"] = previous.get("posting_date_source", "Unknown source")
         for key in ("advanced_degree_required", "no_sponsorship", "us_citizenship_required", "is_closed"):
             if previous.get(key) or job.get(key):
                 combined[key] = True

@@ -6,6 +6,8 @@ Current sources:
 """
 
 import logging
+import calendar
+from datetime import datetime, timezone
 
 import feedparser
 from bs4 import BeautifulSoup
@@ -35,6 +37,9 @@ def fetch_ros_jobs(keywords: list[str]) -> list[dict]:
                     "url": entry.get("link", ""),
                     "source": "ROS Discourse",
                     "description": BeautifulSoup(summary, "html.parser").get_text("\n", strip=True),
+                    "posted_at": datetime.fromtimestamp(calendar.timegm(entry["published_parsed"]), timezone.utc).isoformat()
+                        if entry.get("published_parsed") else None,
+                    "posting_date_source": "RSS publication date",
                 })
     except Exception as exc:  # noqa: BLE001
         logger.warning("ROS Discourse feed error: %s", exc)
