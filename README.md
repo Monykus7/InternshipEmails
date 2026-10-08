@@ -65,6 +65,8 @@ python main.py
 
 ## Scheduled delivery
 
+Each digest has a unique UTC timestamp in its subject and header, plus a unique Message-ID, so runs can be distinguished even when they contain the same number of jobs.
+
 The workflow is [.github/workflows/daily_digest.yml](.github/workflows/daily_digest.yml), named **Internship Digest (Every 6 Hours)**.
 
 1. Put the updated workflow and source on the repository's default branch.

@@ -8,10 +8,11 @@ don't render HTML still show something useful.
 import logging
 import os
 import smtplib
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import format_datetime, make_msgid
 
 from jinja2 import Environment, FileSystemLoader
 import config
@@ -23,7 +24,7 @@ _SMTP_PORT = 465
 
 
 def _build_plain_text(jobs: list[dict]) -> str:
-    lines = [f"Internship Digest — {date.today().strftime('%B %d, %Y')}", ""]
+    lines = [f"Internship Digest — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}", ""]
     if not jobs:
         lines.append(f"No new matching internships with a reported posting date in the last {config.MAX_POSTING_AGE_HOURS} hours. The finder checks every six hours.")
     for job in jobs:
@@ -56,15 +57,19 @@ def send_digest(jobs: list[dict], to_email: str, from_email: str) -> None:
 
     env = Environment(loader=FileSystemLoader(Path(__file__).resolve().parent.parent / "templates"), autoescape=True)
     template = env.get_template("digest.html")
-    html_body = template.render(jobs=jobs, date=date.today().strftime("%B %d, %Y"), freshness_hours=config.MAX_POSTING_AGE_HOURS)
+    sent_time = datetime.now(timezone.utc)
+    sent_at = sent_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+    html_body = template.render(jobs=jobs, date=sent_at, freshness_hours=config.MAX_POSTING_AGE_HOURS)
     plain_body = _build_plain_text(jobs)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = (
-        f"\U0001f916 Summer 2027 Internship Digest \u2014 {len(jobs)} new listings ({date.today()})"
+        f"\U0001f916 Summer 2027 Internship Digest \u2014 {len(jobs)} new listings ({sent_at})"
     )
     msg["From"] = from_email
     msg["To"] = to_email
+    msg["Date"] = format_datetime(sent_time)
+    msg["Message-ID"] = make_msgid(domain=from_email.rsplit("@", 1)[-1])
 
     # Plain-text part first; mail clients prefer the last part they can render
     msg.attach(MIMEText(plain_body, "plain"))
