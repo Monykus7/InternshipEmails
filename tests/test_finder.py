@@ -96,6 +96,14 @@ class EligibilityTests(unittest.TestCase):
         self.assertTrue(self.screen(job(description="Applicants must qualify as a U.S. person under ITAR."), us_person=True))
         self.assertEqual(self.screen(job(description="This position requires U.S. citizenship."), us_person=True), [])
 
+    def test_clearance_requirements_exclude_non_citizen(self):
+        for description in ("Must be eligible to obtain a Secret security clearance.",
+                            "Ability to obtain a security clearance.", "Secret clearance is required."):
+            self.assertEqual(self.screen(job(description=description)), [])
+        for description in ("No security clearance required.", "Security clearance is not required.",
+                            "We do not require a security clearance."):
+            self.assertTrue(self.screen(job(description=description)))
+
     def test_hyphenated_internship_is_matched(self):
         self.assertTrue(self.screen(job(title="Software-Engineering Internship - Summer 2027")))
 

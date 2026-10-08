@@ -144,6 +144,19 @@ def _screen(job: dict, keywords: dict, target_year: str | None,
         return "different major required", notes
     if applicant.get("us_only") and not is_us_location(job.get("location", "")):
         return "non-US or unknown location", notes
+    clearance_text = re.sub(
+        r"\bno (?:security |secret |top secret )?clearance(?: is)? required\b|"
+        r"\b(?:security |secret |top secret )?clearance is not required\b|"
+        r"\b(?:does not|do not) require (?:a )?(?:security |secret |top secret )?clearance\b",
+        "", text.replace("u.s.", "us"),
+    )
+    clearance_required = bool(re.search(
+        r"\b(?:requires?|must|ability to|eligible to)(?:\s+\w+){0,10}\s+"
+        r"(?:security|secret|top secret|ts sci) clearance\b|"
+        r"\b(?:security|secret|top secret|ts sci) clearance (?:is )?required\b", clearance_text
+    ))
+    if applicant.get("us_citizen") is False and clearance_required:
+        return "security clearance required", notes
     no_sponsorship = job.get("no_sponsorship") or bool(re.search(
         r"\b(?:no (?:visa )?sponsorship|(?:cannot|will not|do not|does not|unable to) "
         r"(?:offer|provide|support)(?:\s+\w+){0,5}\s+(?:sponsorship|visas?)|"
